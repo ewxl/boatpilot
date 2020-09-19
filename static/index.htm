@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<title>BoatRunner</title>
+	<style>
+		div.map
+		{
+			width:100%;
+			height:400px;
+		}
+    </style>
+
+	<link href="static/bootstrap-3.4.1-dist/css/bootstrap.min.css" crossorigin="anonymous" rel="stylesheet" type="text/css">
+	<link href="static/bootstrap-3.4.1-dist/css/bootstrap-theme.min.css" crossorigin="anonymous" rel="stylesheet" type="text/css">
+
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.4.3/css/ol.css" type="text/css">
+
+</head>
+
+<body style="background-color:silver;">
+	<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+
+	<script src="static/bootstrap-3.4.1-dist/js/bootstrap.min.js"></script>
+
+ <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.4.3/build/ol.js"></script>
+
+	<script>
+
+		function dec2dms(d,dir)
+		{
+			return (d>0?dir[0]:dir[1]) + " " + Math.floor(Math.abs(d)) + "° " + Math.floor(Math.abs(d)%1*60) + "' " + Math.round( (Math.abs(d)%1*60)%1*60*100)/100+ "''";
+		}
+
+		var gdata = {};
+		var $map = null;
+        var $ws = null;
+        var $me = null;
+        var $view = new ol.View({center:ol.proj.fromLonLat([17, 59.5]),zoom:4});
+
+		$(document).ready(function(){
+			$ws = new WebSocket("ws://"+ location.hostname +":80/ws");
+
+			$ws.addEventListener('message',
+			    function (evt) {
+				data = JSON.parse(evt.data);
+
+				$.each(data,function(key,val){
+					gdata[key] = val;
+
+					if(key=="lon")
+					    val = dec2dms(val,"EW");
+
+					if(key=="lat")
+					    val = dec2dms(val,"NS");
+
+					$("#"+key).text(key+": "+val);
+				    }
+				);
+
+                    pos = ol.proj.fromLonLat([gdata.lon, gdata.lat]);
+                    $me.setPosition(pos);
+				    $view.setCenter(pos);
+                    $view.setZoom(Math.round(18-gdata.speed/5));
+                    $view.setRotation( -(gdata.speed<1.5?gdata.target_track:gdata.track)/180*Math.PI ) ;
+
+				if (data.speed > -1)
+				{
+                    $("g#track").attr("transform","rotate("+ Math.round(gdata.delta) +")");
+				}
+			   }
+			);
+
+			//setup map
+		      $map = new ol.Map({
+	              target: 'map',
+	              layers: [
+			   new ol.layer.Tile({
+				   source: new ol.source.OSM()
+				         }),
+			              ],
+	              view: $view,
+	            });
+
+            $me = new ol.Overlay(
+                {
+                    position: ol.proj.fromLonLat([0,0]),
+                    positioning: "center-center",
+                    element: document.getElementById("marker")
+                });
+
+
+            $map.addOverlay($me);
+
+		     $("span#time").on("click",function(){
+			     $("#qr").toggleClass("hidden");
+			     $("#ctrl").toggleClass("hidden");
+			     $("#map").toggleClass("hidden");
+		     });
+
+		     $("#ctrl button").on("click",function(id){
+                 var q = $(id.currentTarget).attr("q");
+                 $ws.send(JSON.stringify({'add': Number(q)}));
+		     });
+		});
+	</script>
+
+                    <div style="display:none;">
+                        <svg id="marker" style="width:10px;height:10px;" stroke="black" stroke-width="2">
+                            <line x1=0 y1=0 x2=10 y2=10 />
+                            <line x1=0 y1=10 x2=10 y2=0 />
+                        </svg>
+                    </div>
+
+	<div class="container-fluid">	
+		<h3>
+			<span id="time" class="label label-primary">Loading</span>
+		</h3>
+
+		<h5>
+			<span id="speed" class="label label-primary">Loading</span>
+			<span id="track" class="label label-primary"></span>
+			<span id="target_track" class="label label-success"></span>
+		</h5>
+		<h5>
+			<span id="alt" class="label label-primary">Loading</span>
+			<span id="mode" class="label label-primary"></span>
+		</h5>
+		<h5>
+			<span id="out" class="label label-primary">Loading</span>
+			<span id="dsum" class="label label-primary"></span>
+			<span id="delta" class="label label-primary"></span>
+			<span id="Pk" class="label label-primary"></span>
+			<span id="Ik" class="label label-primary"></span>
+		</h5>
+		<h5>
+			<span id="lat" class="label label-primary"></span>
+			<span id="lon" class="label label-primary"></span>
+		</h5>
+	</div>
+
+
+	<div class="container-fluid">
+          <div class="panel panel-default hidden" id="qr">
+            <div class="panel-heading">
+              <h3 class="panel-title">WiFi QR Scan Me</h3>
+            </div>
+            <div class="panel-body">
+                <center>
+			  <img src="static/frame.png" />
+                </center>
+            </div>
+          </div>
+		<div id="map" class="map"></div>
+ </div>
+
+
+ <div style="position:absolute;bottom:0px;width:100%;" id="ctrl">
+    <div class="container-fluid">
+        <center>
+         <svg style="width:150px;height:150px;">
+
+             <g style="stroke:rgb(255,75,75);stroke-width:2px;" transform="translate(75 75)">
+                <circle cx=0 cy=0 r="50" fill="white" />
+                <line x1=0 y1=0 x2=0 y2=-50 style="stroke:rgb(55,75,75);stroke-width:2px;" />
+                 <g id="track">
+                     <line x1=0 y1=0 x2=0 y2=-40 />
+                     <line x1=0 y1=-40 x2=-5 y2=-35 />
+                     <line x1=0 y1=-40 x2=5 y2=-35 />
+                 </g>
+             </g>
+
+         </svg>
+        </center>
+     </div>
+
+    <div class="container-fluid">
+        <center>
+    
+        <button q="-10" type="button" class="btn btn-success" style="font-size:46px;padding:20px;" aria-label="Left">
+              <span class="glyphicon glyphicon-fast-backward" aria-hidden="true"></span>
+        </button>
+
+        <button q="-1" type="button" class="btn btn-default" style="font-size:46px;padding:20px;" aria-label="Left">
+              <span class="glyphicon glyphicon-step-backward" aria-hidden="true"></span>
+        </button>
+
+
+        <button q="1" type="button" class="btn btn-default" style="font-size:46px;padding:20px;" aria-label="Left">
+              <span class="glyphicon glyphicon-step-forward" aria-hidden="true"></span>
+        </button>
+
+        <button q="10" type="button" class="btn btn-success" style="font-size:46px;padding:20px;" aria-label="Left">
+              <span class="glyphicon glyphicon-fast-forward" aria-hidden="true"></span>
+        </button>
+        </center>
+    </div>
+ </div>
+
+</body>
+<!-- bootstrap.min.js  index.htm  jquery-3.5.1.slim.min.js  ol.css  ol.js 
+
+	{class: "TPV", epd: 56.48, epx: 13.479, epy: 24.413, epv: 89.7, …}
+	alt: 19.107
+	class: "TPV"
+	climb: 0.282
+	device: "/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller-if00-port0"
+	epc: 179.4
+	epd: 56.48
+	eps: 48.83
+	ept: 0.005
+	epv: 89.7
+	epx: 13.479
+	epy: 24.413
+	lat: 59.521073197
+	lon: 17.940491539
+	mode: 3
+	pos: "NA"
+	speed: 0.572
+	time: "2020-09-19T10:07:30.000Z"
+	track: 213.0172
+	__proto__: Object
+
+integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" 
+-->
+</html>
