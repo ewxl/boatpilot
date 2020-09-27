@@ -5,14 +5,20 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 
-	<title>BoatRunner</title>
+	<title>BoatPilot beta 0.1</title>
 	<style>
 		div.map
 		{
 			width:100%;
 			height:400px;
 		}
-    </style>
+
+        div#steer_buttons button{
+            font-size:20px;
+            padding:10px;
+        }
+
+"    </style>
 
 	<link href="static/bootstrap-3.4.1-dist/css/bootstrap.min.css" crossorigin="anonymous" rel="stylesheet" type="text/css">
 	<link href="static/bootstrap-3.4.1-dist/css/bootstrap-theme.min.css" crossorigin="anonymous" rel="stylesheet" type="text/css">
@@ -58,7 +64,22 @@
 					if(key=="lat")
 					    val = dec2dms(val,"NS");
 
-					$("#"+key).text(key+": "+val);
+					if(key=="enable")
+                    {
+                        if(val)
+                        {
+                            $("span#enable").addClass("label-success");
+                            $("div#pi_input").addClass("hidden");
+                        }else{
+                            $("span#enable").removeClass("label-success");
+                            $("div#pi_input").removeClass("hidden");
+                        }
+                    }
+
+
+					$("span#"+key).text(key+": "+val);
+					$("input#"+key).val(val);
+
 				    }
 				);
 
@@ -68,12 +89,20 @@
                     $view.setZoom(Math.round(18-gdata.speed/5));
                     $view.setRotation( -(gdata.speed<1.5?gdata.target_track:gdata.track)/180*Math.PI ) ;
 
-				if (data.speed > -1)
-				{
-                    $("g#track").attr("transform","rotate("+ Math.round(gdata.delta) +")");
-				}
+                    $("g#rot").attr("transform","rotate("+ Math.round(gdata.rot) +")");
+                    $("g#steer").attr("transform","rotate("+ Math.round(gdata.steer) +")");
+                    $("g#track").attr("transform","rotate("+ Math.round(gdata.target_track-gdata.track) +")");
 			   }
 			);
+
+            $("span#enable").on("click",function(){$ws.send(JSON.stringify({"enable":1-gdata.enable}));});
+
+            $("div#pi_input input").on("change",function(e){
+                $i = $(e.target);
+                $o = {};
+                $o[$i.attr("id")] = Number($i.val());
+                $ws.send(JSON.stringify($o));
+            });
 
 			//setup map
 		      $map = new ol.Map({
@@ -116,31 +145,32 @@
                         </svg>
                     </div>
 
-	<div class="container-fluid">	
+	<div class="container-fluid" id="debug">	
 		<h3>
-			<span id="time" class="label label-primary">Loading</span>
+			<span id="time" class="label label-primary">No gps?</span>
 		</h3>
-
 		<h5>
-			<span id="speed" class="label label-primary">Loading</span>
+			<span id="lat" class="label label-primary">Loading...</span>
+			<span id="lon" class="label label-primary"></span>
+			<span id="speed" class="label label-primary"></span>
 			<span id="track" class="label label-primary"></span>
 			<span id="target_track" class="label label-success"></span>
+			<span id="rot" class="label label-primary"></span>
+			<span id="steer" class="label label-primary"></span>
 		</h5>
-		<h5>
-			<span id="alt" class="label label-primary">Loading</span>
-			<span id="mode" class="label label-primary"></span>
-		</h5>
-		<h5>
-			<span id="out" class="label label-primary">Loading</span>
-			<span id="dsum" class="label label-primary"></span>
-			<span id="delta" class="label label-primary"></span>
-			<span id="Pk" class="label label-primary"></span>
-			<span id="Ik" class="label label-primary"></span>
-		</h5>
-		<h5>
-			<span id="lat" class="label label-primary"></span>
-			<span id="lon" class="label label-primary"></span>
-		</h5>
+		<h6>
+			<span id="dsum_steer" class="label label-primary"></span>
+			<span id="dsum_track" class="label label-primary"></span>
+			<span id="moving" class="label label-primary"></span>
+			<span id="enable" class="label"></span>
+		</h6>
+
+        <div class="form-inline" id="pi_input">
+            Pkt:<input type="text" class="form-control" id="Pkt" value="_">
+            Ikt:<input type="text" class="form-control" id="Ikt" value="_">
+            Pks:<input type="text" class="form-control" id="Pks" value="_">
+            Iks:<input type="text" class="form-control" id="Iks" value="_">
+        </div>
 	</div>
 
 
@@ -161,43 +191,45 @@
 
  <div style="position:absolute;bottom:0px;width:100%;" id="ctrl">
     <div class="container-fluid">
-        <center>
-         <svg style="width:150px;height:150px;">
+         <svg style="width:300px;height:150px;float:left;">
+             <g style="stroke-width:2px;" transform="translate(75 75)">
+                <circle cx=0 cy=0 r="65" fill="black" />
+                <line x1=0 y1=0 x2=0 y2=-50 style="stroke:rgb(255,255,255);stroke-width:1px;" />
 
-             <g style="stroke:rgb(255,75,75);stroke-width:2px;" transform="translate(75 75)">
-                <circle cx=0 cy=0 r="50" fill="white" />
-                <line x1=0 y1=0 x2=0 y2=-50 style="stroke:rgb(55,75,75);stroke-width:2px;" />
-                 <g id="track">
+                 <g id="track" style="stroke:yellow;">
+                     <line x1=0 y1=0 x2=0 y2=-60 />
+                     <line x1=0 y1=-60 x2=-5 y2=-55 />
+                     <line x1=0 y1=-60 x2=5 y2=-55 />
+                 </g>
+                 <g id="steer" style="stroke:rgb(255,64,64);">
+                     <line x1=0 y1=0 x2=0 y2=-50 />
+                     <line x1=0 y1=-50 x2=-5 y2=-45 />
+                     <line x1=0 y1=-50 x2=5 y2=-45 />
+                 </g>
+                 <g id="rot" style="stroke:rgb(64,255,64);">
                      <line x1=0 y1=0 x2=0 y2=-40 />
                      <line x1=0 y1=-40 x2=-5 y2=-35 />
                      <line x1=0 y1=-40 x2=5 y2=-35 />
                  </g>
+
              </g>
 
          </svg>
-        </center>
-     </div>
-
-    <div class="container-fluid">
-        <center>
-    
-        <button q="-10" type="button" class="btn btn-success" style="font-size:46px;padding:20px;" aria-label="Left">
+         <div style="float:right;">
+        <button q="-10" type="button" class="btn btn-success"  aria-label="Left">
               <span class="glyphicon glyphicon-fast-backward" aria-hidden="true"></span>
         </button>
 
-        <button q="-1" type="button" class="btn btn-default" style="font-size:46px;padding:20px;" aria-label="Left">
+        <button q="-1" type="button" class="btn btn-default" aria-label="Left">
               <span class="glyphicon glyphicon-step-backward" aria-hidden="true"></span>
         </button>
-
-
-        <button q="1" type="button" class="btn btn-default" style="font-size:46px;padding:20px;" aria-label="Left">
+        <button q="1" type="button" class="btn btn-default" aria-label="Left">
               <span class="glyphicon glyphicon-step-forward" aria-hidden="true"></span>
         </button>
-
-        <button q="10" type="button" class="btn btn-success" style="font-size:46px;padding:20px;" aria-label="Left">
+        <button q="10" type="button" class="btn btn-success" aria-label="Left">
               <span class="glyphicon glyphicon-fast-forward" aria-hidden="true"></span>
         </button>
-        </center>
+         </div>
     </div>
  </div>
 

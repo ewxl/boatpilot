@@ -1,15 +1,16 @@
-import tornado.ioloop
-import tornado.websocket
-import tornado.web
+import zmq
 import gps
 import json
 from time import time
 from datetime import datetime
-
 from os.path import isfile
+from RPi import GPIO
+from tornado.ioloop import IOLoop,PeriodicCallback
+from tornado import websocket,web,autoreload
+
 
 g = gps.gps(mode=gps.WATCH_ENABLE|gps.WATCH_PPS)
-data = {'target_track':0,"moving":False,"Pk":0,"Ik":0,"out":0,"dsum":0}
+data = {'target_track':0,"track":0,"moving":False,"Pkt":0,"Ikt":0,"Pks":0,"Iks":0,"dsum_track":0,"dsum_steer":0,"rot":0,"steer":0,"enable":0}
 logfile = None
 track = []
 
@@ -17,7 +18,33 @@ if isfile("settings.json"):
     with open("settings.json","r") as r:
         data.update(json.loads(r.read()))
 
-class WSHandler(tornado.websocket.WebSocketHandler):
+GPIO.setmode(GPIO.BCM)
+
+class Motor:
+    def __init__(self,*args):
+        for p in args:
+            GPIO.setup(p,GPIO.OUT)
+        self.apwm,self.a1,self.a2,self.stby = args
+        self.pwm = GPIO.PWM(self.apwm,1000)
+        self.speed = 0
+
+    def startMotor(self):
+        GPIO.output(self.stby,1)
+
+    def setSpeed(self,speed):
+        self.speed = speed
+        self.pwm.start(min(100,abs(speed)))
+
+    def setDirection(self,direction):
+        GPIO.output(self.a1,not direction)
+        GPIO.output(self.a2,direction)
+
+    def stopMotor(self):
+        GPIO.output(self.stby,0)
+
+mtr = Motor(6,13,19,26)
+
+class WSHandler(websocket.WebSocketHandler):
     cl = []
     def open(self):
         global track
@@ -38,22 +65,39 @@ class WSHandler(tornado.websocket.WebSocketHandler):
             return
 
         data.update(msg)
+
         for c in WSHandler.cl:
             c.write_message(data)
 
-        if "Pk" in data or "Ik" in data:
-            with open("settings.json","w+") as w:
-                w.write(json.dumps({"Pk":data.get("Pk"),"Ik":data.get("Ik")}))
+        for key,val in msg.items():
+            if key=="m_speed":
+                mtr.setSpeed(val)
+            if key=="m_direction":
+                mtr.setDirection(val)
 
-class MainHandler(tornado.web.RequestHandler):
+            if key=="enable":
+                if val:
+                    data['target_track'] = data['track']
+                else:
+                    mtr.stopMotor()
+
+        if "Pkt" in data or "Ikt" in data or "Pks" in data or "Iks" in data:
+            with open("settings.json","w+") as w:
+                w.write(json.dumps({"Pkt":data.get("Pkt"),
+                                    "Ikt":data.get("Ikt"),
+                                    "Pks":data.get("Pks"),
+                                    "Iks":data.get("Iks"),
+                                    }))
+
+class MainHandler(web.RequestHandler):
     def get(self):
         self.render("static/index.htm")
 
 def make_app():
-    return tornado.web.Application([
+    return web.Application([
                     (r"/", MainHandler),
-                    (r"/static/(.*)", tornado.web.StaticFileHandler,{"path":"./static"}),
-                    (r"/(favicon.ico)", tornado.web.StaticFileHandler,{"path":"./static"}),
+                    (r"/static/(.*)", web.StaticFileHandler,{"path":"./static"}),
+                    (r"/(favicon.ico)", web.StaticFileHandler,{"path":"./static"}),
                     (r"/ws", WSHandler),
                     ],debug=True)
 
@@ -68,7 +112,6 @@ def gps_handler():
 
             if not data.get("moving") and r.get("speed") > 1.5:
                 data['moving'] = True
-                
                 logfile = open("track_{0}.log".format(datetime.utcnow().isoformat()),"w+")
 
             if data.get("moving") and r.get("speed") < 1:
@@ -81,25 +124,81 @@ def gps_handler():
 
                 while len(track) > 300:
                     track.pop()
+            r.update(moving=data['moving'])
             
             for c in WSHandler.cl:
-                c.write_message(data)
+                c.write_message(r)
 
-loop_int = 1000
+PI_INT_TRACK = 1000
+PI_INT_STEER = 200
 
-def pi_loop():
+def pi_track_loop():
+    if not data.get("enable"):
+        return
     delta = (data.get("target_track",0)-data.get("track",0)+180)%360-180
-
-    data["dsum"] += delta*data['Ik']*loop_int/1000
-    data["out"] = delta*data.get("Pk")+data["dsum"]
+    data["dsum_track"] += delta*data['Ikt']*PI_INT_TRACK/1000
+    data["steer"] = delta*data.get("Pkt")+data["dsum_track"]
 
     for c in WSHandler.cl:
-        c.write_message({"out":data['out'],"dsum":data['dsum'],"delta":delta})
+        c.write_message(
+                dict([(k,data.get(k)) for k in "steer rot dsum_steer dsum_track track".split()])
+                )
+
+def pi_steer_loop():
+    if not data.get("enable"):
+        return
+    delta = data.get("steer",0)-data.get("rot",0)
+    data["dsum_steer"] += delta*data['Iks']*PI_INT_STEER/1000
+
+    out = delta*data.get("Pks")+data["dsum_steer"]
+
+    if abs(out) < 1:
+        mtr.stopMotor()
+    else:
+        mtr.startMotor()
+        
+    if out > mtr.speed:
+        mtr.speed += 10
+    elif out < mtr.speed:
+        mtr.speed -= 10
+
+    mtr.setDirection(out > 0)
+    mtr.setSpeed(mtr.speed)
+
+ctx = zmq.Context()
+skt = ctx.socket(zmq.SUB)
+
+skt.connect("ipc:///tmp/rotary.enc")
+skt.setsockopt(zmq.SUBSCRIBE,"R")
+
+def z_recv():
+    try:
+        while True:
+            d = skt.recv(flags=zmq.NOBLOCK)
+            data['rot'] = -int(d[1:])
+            for c in WSHandler.cl:
+                c.write_message({"rot":data['rot']})
+
+    except zmq.Again:
+        pass
 
 if __name__ == "__main__":
+
     app = make_app()
     app.listen(80)
 
-    tornado.ioloop.PeriodicCallback(gps_handler,50).start()
-    tornado.ioloop.PeriodicCallback(pi_loop,loop_int).start()
-    tornado.ioloop.IOLoop.current().start()
+    PeriodicCallback(gps_handler,50).start()
+    PeriodicCallback(z_recv,50).start()
+    PeriodicCallback(pi_track_loop,PI_INT_TRACK).start()
+    PeriodicCallback(pi_steer_loop,PI_INT_STEER).start()
+
+    def graceful():
+        GPIO.cleanup()
+
+    autoreload.add_reload_hook(graceful)
+
+    try:
+        print("Running...")
+        IOLoop.current().start()
+    finally:
+        GPIO.cleanup()
