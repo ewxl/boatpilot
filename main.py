@@ -1,15 +1,15 @@
 import zmq
 import gps
 import json
-from time import time
+from time import strptime,mktime
 from datetime import datetime
+
 from os.path import isfile
 from RPi import GPIO
 from tornado.ioloop import IOLoop,PeriodicCallback
 from tornado import websocket,web,autoreload
 
 
-g = gps.gps(mode=gps.WATCH_ENABLE|gps.WATCH_PPS)
 data = {'target_track':0,"track":0,"moving":False,"Pkt":0,"Ikt":0,"Pks":0,"Iks":0,"dsum_track":0,"dsum_steer":0,"rot":0,"steer":0,"enable":0,'m_speed':0}
 logfile = None
 track = []
@@ -107,32 +107,42 @@ def make_app():
                     ],debug=True)
 
 "<dictwrapper: {u'epx': 13.479, u'epy': 24.413, u'epv': 89.7, u'ept': 0.005, u'lon': 17.940367, u'eps': 16.61, u'epc': 61.02, u'lat': 59.521110374, u'track': 170.7872, u'mode': 3, u'time': u'2020-09-18T18:58:34.940Z', u'device': u'/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller-if00-port0', u'climb': -0.426, u'alt': 5.066, u'speed': 0.764, u'class': u'TPV'}>"
+g = None
 
 def gps_handler():
-    global logfile,track
+    global logfile,track,g
+    if g is None:
+        g = gps.gps(mode=gps.WATCH_ENABLE|gps.WATCH_PPS)
     while g.waiting():
-        r = g.next()
+        try:
+            r = g.next()
+        except StopIteration:
+            g = None
+            break
         if r.get("class") == "TPV":
             data.update(r)
 
+            ts = mktime(strptime(r.get('time')[:-5],"%Y-%m-%dT%H:%M:%S"))
+            dt = datetime.fromtimestamp(ts)
+
             if not data.get("moving") and r.get("speed") > 1.5:
                 data['moving'] = True
-                logfile = open("track_{0}.log".format(datetime.utcnow().isoformat()),"w+")
+                logfile = open("track_{0}.log".format(dt.isoformat()),"w+")
 
             if data.get("moving") and r.get("speed") < 1:
                 data['moving'] = False
                 logfile.close()
 
             if data.get("moving"):
-                logfile.write("{0},{lat},{lon},{track},{speed}\n".format(time(),**r))
+                logfile.write("{0},{lat},{lon},{track},{speed}\n".format(ts,**r))
                 track.insert(0,(r.get("lat"),r.get("lon")))
 
                 while len(track) > 300:
                     track.pop()
-            r.update(moving=data['moving'])
             
             for c in WSHandler.cl:
-                c.write_message(r)
+                c.write_message(dict(r))
+                c.write_message({'moving':data['moving']})
 
 PI_INT_TRACK = 1000
 PI_INT_STEER = 200
