@@ -76,6 +76,16 @@
                         }
                     }
 
+					if(key=="m_enable")
+                    {
+                        if(val)
+                        {
+                            $("span#m_enable").addClass("label-success");
+                        }else{
+                            $("span#m_enable").removeClass("label-success");
+                        }
+                    }
+
 
 					$("span#"+key).text(key+": "+val);
 					$("input#"+key).val(val);
@@ -96,6 +106,7 @@
 			);
 
             $("span#enable").on("click",function(){$ws.send(JSON.stringify({"enable":1-gdata.enable}));});
+            $("span#m_enable").on("click",function(){$ws.send(JSON.stringify({"m_enable":1-gdata.m_enable}));});
 
             $("div#pi_input input").on("change",function(e){
                 $i = $(e.target);
@@ -166,10 +177,11 @@
 		</h6>
 
         <div class="form-inline" id="pi_input">
-            Pkt:<input type="text" class="form-control" id="Pkt" value="_">
-            Ikt:<input type="text" class="form-control" id="Ikt" value="_">
-            Pks:<input type="text" class="form-control" id="Pks" value="_">
-            Iks:<input type="text" class="form-control" id="Iks" value="_">
+            Pkt:<input type="text" class="form-control" id="Pkt" value="_"><br />
+            Ikt:<input type="text" class="form-control" id="Ikt" value="_"><br />
+            Pks:<input type="text" class="form-control" id="Pks" value="_"><br />
+            Iks:<input type="text" class="form-control" id="Iks" value="_"><br />
+            MSpeed:<input type="text" class="form-control" id="m_speed" value="_"><br />
         </div>
 	</div>
 
@@ -215,21 +227,21 @@
              </g>
 
          </svg>
-         <div style="float:right;">
-        <button q="-10" type="button" class="btn btn-success"  aria-label="Left">
-              <span class="glyphicon glyphicon-fast-backward" aria-hidden="true"></span>
-        </button>
+        <div style="float:right;">
+            <button q="-10" type="button" class="btn btn-success"  aria-label="Left">
+                  <span class="glyphicon glyphicon-fast-backward" aria-hidden="true"></span>
+            </button>
 
-        <button q="-1" type="button" class="btn btn-default" aria-label="Left">
-              <span class="glyphicon glyphicon-step-backward" aria-hidden="true"></span>
-        </button>
-        <button q="1" type="button" class="btn btn-default" aria-label="Left">
-              <span class="glyphicon glyphicon-step-forward" aria-hidden="true"></span>
-        </button>
-        <button q="10" type="button" class="btn btn-success" aria-label="Left">
-              <span class="glyphicon glyphicon-fast-forward" aria-hidden="true"></span>
-        </button>
-         </div>
+            <button q="-1" type="button" class="btn btn-default" aria-label="Left">
+                  <span class="glyphicon glyphicon-step-backward" aria-hidden="true"></span>
+            </button>
+            <button q="1" type="button" class="btn btn-default" aria-label="Left">
+                  <span class="glyphicon glyphicon-step-forward" aria-hidden="true"></span>
+            </button>
+            <button q="10" type="button" class="btn btn-success" aria-label="Left">
+                  <span class="glyphicon glyphicon-fast-forward" aria-hidden="true"></span>
+            </button>
+        </div>
     </div>
  </div>
 

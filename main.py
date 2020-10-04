@@ -10,7 +10,7 @@ from tornado import websocket,web,autoreload
 
 
 g = gps.gps(mode=gps.WATCH_ENABLE|gps.WATCH_PPS)
-data = {'target_track':0,"track":0,"moving":False,"Pkt":0,"Ikt":0,"Pks":0,"Iks":0,"dsum_track":0,"dsum_steer":0,"rot":0,"steer":0,"enable":0}
+data = {'target_track':0,"track":0,"moving":False,"Pkt":0,"Ikt":0,"Pks":0,"Iks":0,"dsum_track":0,"dsum_steer":0,"rot":0,"steer":0,"enable":0,'m_speed':0}
 logfile = None
 track = []
 
@@ -69,25 +69,30 @@ class WSHandler(websocket.WebSocketHandler):
         for c in WSHandler.cl:
             c.write_message(data)
 
+        savefile = False
+        save = "Pkt,Ikt,Pks,Iks".split(",")
+
         for key,val in msg.items():
             if key=="m_speed":
-                mtr.setSpeed(val)
-            if key=="m_direction":
-                mtr.setDirection(val)
+                mtr.setSpeed(abs(val))
+                mtr.setDirection(val > 0)
+                if abs(val) > 1:
+                    mtr.startMotor()
+                else:
+                    mtr.stopMotor()
 
             if key=="enable":
                 if val:
                     data['target_track'] = data['track']
                 else:
                     mtr.stopMotor()
+                    
+            if key in save:
+                savefile = True
 
-        if "Pkt" in data or "Ikt" in data or "Pks" in data or "Iks" in data:
+        if savefile:
             with open("settings.json","w+") as w:
-                w.write(json.dumps({"Pkt":data.get("Pkt"),
-                                    "Ikt":data.get("Ikt"),
-                                    "Pks":data.get("Pks"),
-                                    "Iks":data.get("Iks"),
-                                    }))
+                w.write(json.dumps(dict([(k,data.get(k,0)) for k in save])))
 
 class MainHandler(web.RequestHandler):
     def get(self):
