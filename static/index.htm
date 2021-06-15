@@ -18,7 +18,7 @@
             padding:10px;
         }
 
-"    </style>
+    </style>
 
 	<link href="static/bootstrap-3.4.1-dist/css/bootstrap.min.css" crossorigin="anonymous" rel="stylesheet" type="text/css">
 	<link href="static/bootstrap-3.4.1-dist/css/bootstrap-theme.min.css" crossorigin="anonymous" rel="stylesheet" type="text/css">
@@ -120,7 +120,8 @@
 	              target: 'map',
 	              layers: [
 			   new ol.layer.Tile({
-				   source: new ol.source.OSM()
+                   source: new ol.source.OSM({url:"https://map04.eniro.com/geowebcache/service/tms1.0.0/nautical2x/{z}/{x}/{y}.png?v=20210507"})
+                   // https://map04.eniro.com/geowebcache/service/tms1.0.0/nautical2x/16/36014/46334.png?v=20210507
 				         }),
 			              ],
 	              view: $view,
