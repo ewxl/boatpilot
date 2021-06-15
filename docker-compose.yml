@@ -1,0 +1,22 @@
+version: "3.9"
+    
+services:
+    influx:
+        image: arm32v7/influxdb
+        volumes:
+            - influxdata: /var/lib/influxdb2
+            - influxetc: /etc/influxdb2
+        ports:
+            - "8086:8086"
+        env-file: ./influx.env
+
+    boatpilot:
+        image: boatpilot
+        ports:
+            - "80:80"
+        devices:
+            - "/dev/"
+
+volumes:
+    influxdata: {}
+    influxetc: {}
