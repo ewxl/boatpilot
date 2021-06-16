@@ -1,22 +1,32 @@
-version: "3.9"
-    
+version: "3.3"
 services:
-    influx:
-        image: arm32v7/influxdb
-        volumes:
-            - influxdata: /var/lib/influxdb2
-            - influxetc: /etc/influxdb2
-        ports:
-            - "8086:8086"
-        env-file: ./influx.env
+  boatpilot:
+    image: boatpilot
+    depends_on:
+      - influx
+      - gpsd
+    ports:
+      - "80:80"
+    devices:
+      - "/dev/gpiomem"
 
-    boatpilot:
-        image: boatpilot
-        ports:
-            - "80:80"
-        devices:
-            - "/dev/"
+  gpsd:
+    image: forcedinductionz/docker-gpsd:latest-armhf
+    devices: 
+      - "/dev/serial/by-id/usb-u-blox_AG_-_www.u-blox.com_u-blox_6_-_GPS_Receiver-if00:/dev/ttySS0"
+    command: "/dev/ttySS0"
+    ports:
+      - "127.0.0.1:2947:2947"
+
+  influx:
+    image: arm32v7/influxdb
+    volumes:
+      - influxdata:/var/lib/influxdb2
+      - influxetc:/etc/influxdb2
+    ports:
+      - "8086:8086"
+    env_file: ./influx.env
 
 volumes:
-    influxdata: {}
-    influxetc: {}
+  influxdata:
+  influxetc:

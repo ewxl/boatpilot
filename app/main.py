@@ -112,7 +112,7 @@ g = None
 def gps_handler():
     global logfile,track,g
     if g is None:
-        g = gps.gps(mode=gps.WATCH_ENABLE|gps.WATCH_PPS)
+        g = gps.gps(host="gpsd",mode=gps.WATCH_ENABLE|gps.WATCH_PPS)
     while g.waiting():
         try:
             r = g.next()
@@ -184,7 +184,7 @@ ctx = zmq.Context()
 skt = ctx.socket(zmq.SUB)
 
 skt.connect("ipc:///tmp/rotary.enc")
-skt.setsockopt(zmq.SUBSCRIBE,"R")
+skt.setsockopt(zmq.SUBSCRIBE,b"R")
 
 def z_recv():
     try:
