@@ -20,20 +20,20 @@
 
     </style>
 
-	<link href="static/bootstrap-3.4.1-dist/css/bootstrap.min.css" crossorigin="anonymous" rel="stylesheet" type="text/css">
-	<link href="static/bootstrap-3.4.1-dist/css/bootstrap-theme.min.css" crossorigin="anonymous" rel="stylesheet" type="text/css">
-
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.4.3/css/ol.css" type="text/css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/css/ol.css" type="text/css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@5.9.55/css/materialdesignicons.min.css" type="text/css">
 
 </head>
 
 <body style="background-color:silver;">
 	<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
-	<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
 
-	<script src="static/bootstrap-3.4.1-dist/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-gtEjrD/SeCtmISkJkNUaaKMoLD0//ElJ19smozuHV6z3Iehds+3Ulb9Bn9Plx0x4" crossorigin="anonymous"></script>
 
- <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.4.3/build/ol.js"></script>
+
+ <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/build/ol.js"></script>
+
 
 	<script>
 
@@ -46,10 +46,35 @@
 		var $map = null;
         var $ws = null;
         var $me = null;
-        var $view = new ol.View({center:ol.proj.fromLonLat([17, 59.5]),zoom:4});
+        var $view = new ol.View({center:ol.proj.fromLonLat([17.83389, 59.52377]),zoom:15});
+
 
 		$(document).ready(function(){
 			$ws = new WebSocket("ws://"+ location.hostname +":80/ws");
+
+			//setup map
+			$map = new ol.Map({
+				target: 'map',
+				layers: [
+					new ol.layer.Tile({
+						source: new ol.source.XYZ(
+							{
+								url:"https://map0{1-4}.eniro.com/geowebcache/service/tms1.0.0/nautical2x/{z}/{x}/{-y}.png" //?v=20210507"
+								,maxZoom:17,minZoom:13})
+					}),
+				],
+				view: $view,
+			});
+
+			$me = new ol.Overlay(
+				{
+					position: ol.proj.fromLonLat([0,0]),
+					positioning: "center-center",
+					element: document.getElementById("marker2")
+				});
+
+
+			$map.addOverlay($me);
 
 			$ws.addEventListener('message',
 			    function (evt) {
@@ -68,11 +93,11 @@
                     {
                         if(val)
                         {
-                            $("span#enable").addClass("label-success");
-                            $("div#pi_input").addClass("hidden");
+                            $("span#enable").addClass("bg-success");
+                            $("div#pi_input").addClass("visually-hidden");
                         }else{
-                            $("span#enable").removeClass("label-success");
-                            $("div#pi_input").removeClass("hidden");
+                            $("span#enable").removeClass("bg-success");
+                            $("div#pi_input").removeClass("visually-hidden");
                         }
                     }
 
@@ -80,9 +105,9 @@
                     {
                         if(val)
                         {
-                            $("span#m_enable").addClass("label-success");
+                            $("span#m_enable").addClass("bg-success");
                         }else{
-                            $("span#m_enable").removeClass("label-success");
+                            $("span#m_enable").removeClass("bg-success");
                         }
                     }
 
@@ -93,11 +118,12 @@
 				    }
 				);
 
-                    pos = ol.proj.fromLonLat([gdata.lon, gdata.lat]);
-                    $me.setPosition(pos);
-				    $view.setCenter(pos);
-                    $view.setZoom(Math.round(18-gdata.speed/5));
-                    $view.setRotation( -(gdata.speed<1.5?gdata.target_track:gdata.track)/180*Math.PI ) ;
+                        pos = ol.proj.fromLonLat([gdata.lon, gdata.lat]);
+                        $me.setPosition(pos);
+                        $view.setCenter(pos);
+                        $view.setZoom(Math.round(17-gdata.speed/5));
+                        $view.setRotation( -(gdata.speed<1.5?gdata.target_track:gdata.track)/180*Math.PI ) ;
+                    
 
                     $("g#rot").attr("transform","rotate("+ Math.round(gdata.rot) +")");
                     $("g#steer").attr("transform","rotate("+ Math.round(gdata.steer) +")");
@@ -115,32 +141,11 @@
                 $ws.send(JSON.stringify($o));
             });
 
-			//setup map
-		      $map = new ol.Map({
-	              target: 'map',
-	              layers: [
-			   new ol.layer.Tile({
-                   source: new ol.source.OSM({url:"https://map04.eniro.com/geowebcache/service/tms1.0.0/nautical2x/{z}/{x}/{y}.png?v=20210507"})
-                   // https://map04.eniro.com/geowebcache/service/tms1.0.0/nautical2x/16/36014/46334.png?v=20210507
-				         }),
-			              ],
-	              view: $view,
-	            });
-
-            $me = new ol.Overlay(
-                {
-                    position: ol.proj.fromLonLat([0,0]),
-                    positioning: "center-center",
-                    element: document.getElementById("marker")
-                });
-
-
-            $map.addOverlay($me);
 
 		     $("span#time").on("click",function(){
-			     $("#qr").toggleClass("hidden");
-			     $("#ctrl").toggleClass("hidden");
-			     $("#map").toggleClass("hidden");
+			     $("#qr").toggleClass("visually-hidden");
+			     $("#ctrl").toggleClass("visually-hidden");
+			     $("#map").toggleClass("visually-hidden");
 		     });
 
 		     $("#ctrl button").on("click",function(id){
@@ -151,6 +156,7 @@
 	</script>
 
                     <div style="display:none;">
+						<i class="mdi mdi-navigation" aria-hidden="true" id="marker2"></i>
                         <svg id="marker" style="width:10px;height:10px;" stroke="black" stroke-width="2">
                             <line x1=0 y1=0 x2=10 y2=10 />
                             <line x1=0 y1=10 x2=10 y2=0 />
@@ -159,36 +165,67 @@
 
 	<div class="container-fluid" id="debug">	
 		<h3>
-			<span id="time" class="label label-primary">No gps?</span>
+			<span id="time" class="badge bg-primary">No gps?</span>
 		</h3>
 		<h5>
-			<span id="lat" class="label label-primary">Loading...</span>
-			<span id="lon" class="label label-primary"></span>
-			<span id="speed" class="label label-primary"></span>
-			<span id="track" class="label label-primary"></span>
-			<span id="target_track" class="label label-success"></span>
-			<span id="rot" class="label label-primary"></span>
-			<span id="steer" class="label label-primary"></span>
+			<span id="lat" class="badge bg-primary">Loading...</span>
+			<span id="lon" class="badge bg-primary"></span>
+			<span id="speed" class="badge bg-primary"></span>
+			<span id="track" class="badge bg-primary"></span>
+			<span id="target_track" class="badge bg-success"></span>
+			<span id="rot" class="badge bg-primary"></span>
+			<span id="steer" class="badge bg-primary"></span>
 		</h5>
 		<h6>
-			<span id="dsum_steer" class="label label-primary"></span>
-			<span id="dsum_track" class="label label-primary"></span>
-			<span id="moving" class="label label-primary"></span>
-			<span id="enable" class="label"></span>
+			<span id="dsum_steer" class="badge bg-primary"></span>
+			<span id="dsum_track" class="badge bg-primary"></span>
+			<span id="moving" class="badge bg-primary"></span>
+			<span id="enable" class="badge"></span>
 		</h6>
 
         <div class="form-inline" id="pi_input">
-            Pkt:<input type="text" class="form-control" id="Pkt" value="_"><br />
-            Ikt:<input type="text" class="form-control" id="Ikt" value="_"><br />
-            Pks:<input type="text" class="form-control" id="Pks" value="_"><br />
-            Iks:<input type="text" class="form-control" id="Iks" value="_"><br />
-            MSpeed:<input type="text" class="form-control" id="m_speed" value="_"><br />
+
+<div class="input-group mb-3">
+  <div class="input-group-prepend">
+    <span class="input-group-text" id="basic-addon1">Pkt</span>
+  </div>
+  <input type="text" id="Pkt" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon1">
+</div>
+
+<div class="input-group mb-3">
+  <div class="input-group-prepend">
+    <span class="input-group-text" id="basic-addon2">Ikt</span>
+  </div>
+  <input type="text" id="Ikt" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon2">
+</div>
+
+<div class="input-group mb-3">
+  <div class="input-group-prepend">
+    <span class="input-group-text" id="basic-addon3">Pks</span>
+  </div>
+  <input type="text" id="Pks" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon3">
+</div>
+
+<div class="input-group mb-3">
+  <div class="input-group-prepend">
+    <span class="input-group-text" id="basic-addon4">Iks</span>
+  </div>
+  <input type="text" id="Iks" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon4">
+</div>
+
+<div class="input-group mb-3">
+  <div class="input-group-prepend">
+    <span class="input-group-text" id="basic-addon5">MSpeed</span>
+  </div>
+  <input type="text" id="m_speed" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon5">
+</div>
+
         </div>
 	</div>
 
 
 	<div class="container-fluid">
-          <div class="panel panel-default hidden" id="qr">
+          <div class="panel panel-default visually-hidden" id="qr">
             <div class="panel-heading">
               <h3 class="panel-title">WiFi QR Scan Me</h3>
             </div>
@@ -200,7 +237,6 @@
           </div>
 		<div id="map" class="map"></div>
  </div>
-
 
  <div style="position:absolute;bottom:0px;width:100%;" id="ctrl">
     <div class="container-fluid">
@@ -228,19 +264,20 @@
              </g>
 
          </svg>
-        <div style="float:right;">
-            <button q="-10" type="button" class="btn btn-success"  aria-label="Left">
-                  <span class="glyphicon glyphicon-fast-backward" aria-hidden="true"></span>
-            </button>
 
-            <button q="-1" type="button" class="btn btn-default" aria-label="Left">
-                  <span class="glyphicon glyphicon-step-backward" aria-hidden="true"></span>
+
+        <div style="float:right;">
+            <button q="-10" type="button" class="btn btn-success">
+					<i class="mdi mdi-arrow-left-bold-circle" aria-hidden="true"></i>
             </button>
-            <button q="1" type="button" class="btn btn-default" aria-label="Left">
-                  <span class="glyphicon glyphicon-step-forward" aria-hidden="true"></span>
+            <button q="-1" type="button" class="btn btn-info">
+					<i class="mdi mdi-arrow-left-bold-circle-outline" aria-hidden="true"></i>
             </button>
-            <button q="10" type="button" class="btn btn-success" aria-label="Left">
-                  <span class="glyphicon glyphicon-fast-forward" aria-hidden="true"></span>
+            <button q="1" type="button" class="btn btn-info">
+					<i class="mdi mdi-arrow-right-bold-circle-outline" aria-hidden="true"></i>
+            </button>
+            <button q="10" type="button" class="btn btn-success">
+					<i class="mdi mdi-arrow-right-bold-circle" aria-hidden="true"></i>
             </button>
         </div>
     </div>

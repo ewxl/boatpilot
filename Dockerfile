@@ -10,5 +10,5 @@ RUN pip install --no-cache-dir RPi.GPIO zmq tornado
 #RUN pip install --no-cache-dir gps
 COPY --from=builder /usr/src/app/gps /usr/local/lib/python3.9/site-packages/gps
 
-COPY ./app ./
+#COPY ./app ./
 CMD [ "python3", "./main.py"]
