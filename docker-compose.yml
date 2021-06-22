@@ -2,15 +2,19 @@ version: "3.3"
 services:
   boatpilot:
     image: boatpilot
+    privileged: true
     depends_on:
       - influx
       - gpsd
     ports:
-      - "80:80"
+      - "80:8000"
     volumes:
       - ./app:/usr/src/app # for developing.
     devices:
+      - "/dev/mem"
       - "/dev/gpiomem"
+    cap_add:
+        - SYS_RAWIO
 
   gpsd:
     image: forcedinductionz/docker-gpsd:latest-armhf
