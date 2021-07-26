@@ -6,9 +6,8 @@ RUN sed -e 's/\@GPSAPIVERMAJ\@/3/' -e 's/\@GPSAPIVERMIN\@/22/' __init__.py.in > 
 FROM arm32v7/python:3
 WORKDIR /usr/src/app
 
-RUN pip install --no-cache-dir RPi.GPIO zmq tornado
-#RUN pip install --no-cache-dir gps
+RUN pip install --no-cache-dir RPi.GPIO tornado zmq influxdb-client
 COPY --from=builder /usr/src/app/gps /usr/local/lib/python3.9/site-packages/gps
 
-#COPY ./app ./
+#COPY ./app ./ #not needed during development.
 CMD [ "python3", "./main.py"]

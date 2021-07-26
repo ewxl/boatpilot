@@ -1,35 +1,20 @@
-from RPi import GPIO
-import zmq
+class Rotary():
+    def __init__(self,callback):
+        self.callback = callback
+        self.value,self.min,self.max = 0,-1,1
 
-GPIO.setmode(GPIO.BCM)
-
-btn,a,b = 14,18,23
-counter = 0
-GPIO.setup(btn,GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(a,GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(b,GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-ctx = zmq.Context()
-skt = ctx.socket(zmq.PUB)
-skt.bind("ipc:///tmp/rotary.enc")
-
-def btn_press(e):
-    global counter
-    counter = 0
-    skt.send("R"+str(counter))
-
-GPIO.add_event_detect(btn,GPIO.RISING,callback=btn_press)
-
-try:
-    while True:
-        GPIO.wait_for_edge(a, GPIO.FALLING if counter%2==0 else GPIO.RISING)
-        dtState = GPIO.input(b)
-
-        if counter%2==dtState:
-            counter += 1
+    def btn_press(self,e):
+        self.value,self.min,self.max = 0,-1,1
+        self.callback(self.value,0)
+        
+    def edge(self,other):
+        if self.value%2==other:
+            self.value += 1
         else:
-            counter -= 1
-        skt.send("R"+str(counter))
+            self.value -= 1
 
-except Exception, e:
-    print("Exit",e)
+        self.max = max(self.value,self.max)
+        self.min = min(self.value,self.min)
+        norm = (self.value-self.min)/(self.max-self.min)*2-1
+        self.callback(self.value,norm)
+
