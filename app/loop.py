@@ -6,7 +6,7 @@ class PILoop():
         self.i = i
         self.isum = 0
         self.last = time()
-        self.delta = delta if delta else lambda x,y: x*y
+        self.delta = delta if delta else lambda x,y: x-y
         self.target = 0
 
     def set(self,target):
@@ -17,5 +17,3 @@ class PILoop():
         d = self.delta(value,self.target)
         self.isum += d*self.i*dtime
         return d*self.p+self.isum
-    
-

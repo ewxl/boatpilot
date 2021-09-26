@@ -27,7 +27,7 @@ class WSHandler(websocket.WebSocketHandler):
     def on_message(self,msg):
         msg = json.loads(msg)
         #WSHandler.write_all(data)
-        App.socket.send_string("hello")
+        App.socket.send_json(msg)
 
 "<dictwrapper: {u'epx': 13.479, u'epy': 24.413, u'epv': 89.7, u'ept': 0.005, u'lon': 17.940367, u'eps': 16.61, u'epc': 61.02, u'lat': 59.521110374, u'track': 170.7872, u'mode': 3, u'time': u'2020-09-18T18:58:34.940Z', u'device': u'/dev/serial/by-id/usb-Prolific_Technology_Inc._USB-Serial_Controller-if00-port0', u'climb': -0.426, u'alt': 5.066, u'speed': 0.764, u'class': u'TPV'}>"
 
@@ -37,7 +37,7 @@ class App:
 
         context = zmq.Context()
         App.socket = context.socket(zmq.PAIR)
-        App.socket.connect("tcp://control:5556")
+        App.socket.connect("ipc:///tmp/com")
     
     @staticmethod
     def control_send(data):
@@ -46,16 +46,15 @@ class App:
     async def control_com(socket):
         while True:
             try:
-                message = App.socket.recv(flags=zmq.NOBLOCK)
-                print ("Message received:", message)
+                message = App.socket.recv_string(flags=zmq.NOBLOCK)
+                WSHandler.write_all(message)
             except zmq.Again as e:
-                await gen.sleep(0.001)
+                await gen.sleep(0.005)
 
 def make_webserver():
     class MainHandler(web.RequestHandler):
         def get(self):
             self.render("static/index.htm")
-
     return web.Application([
                     (r"/", MainHandler),
                     (r"/static/(.*)", web.StaticFileHandler,{"path":"./static"}),
@@ -79,7 +78,7 @@ def main():
     autoreload.add_reload_hook(graceful)
 
     try:
-        print("Ready.")
+        print("App ready.")
         IOLoop.current().start()
     finally:
         App.socket.close()

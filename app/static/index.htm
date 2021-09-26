@@ -51,53 +51,17 @@
 			<span id="speed" class="badge bg-primary"></span>
 			<span id="track" class="badge bg-primary"></span>
 			<span id="target_track" class="badge bg-success"></span>
-			<span id="rot" class="badge bg-primary"></span>
-			<span id="steer" class="badge bg-primary"></span>
+			<span id="heading" class="badge bg-primary"></span>
+			<span id="steeringwheel" class="badge bg-primary"></span>
 		</h5>
 		<h6>
-			<span id="dsum_steer" class="badge bg-primary"></span>
-			<span id="dsum_track" class="badge bg-primary"></span>
+			<span id="track_l" class="badge bg-primary"></span>
+			<span id="m_out" class="badge bg-primary"></span>
 			<span id="moving" class="badge bg-primary"></span>
 			<span id="enable" class="badge"></span>
 		</h6>
 
         <div class="form-inline" id="pi_input">
-
-<div class="input-group mb-3">
-  <div class="input-group-prepend">
-    <span class="input-group-text" id="basic-addon1">Pkt</span>
-  </div>
-  <input type="text" id="Pkt" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon1">
-</div>
-
-<div class="input-group mb-3">
-  <div class="input-group-prepend">
-    <span class="input-group-text" id="basic-addon2">Ikt</span>
-  </div>
-  <input type="text" id="Ikt" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon2">
-</div>
-
-<div class="input-group mb-3">
-  <div class="input-group-prepend">
-    <span class="input-group-text" id="basic-addon3">Pks</span>
-  </div>
-  <input type="text" id="Pks" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon3">
-</div>
-
-<div class="input-group mb-3">
-  <div class="input-group-prepend">
-    <span class="input-group-text" id="basic-addon4">Iks</span>
-  </div>
-  <input type="text" id="Iks" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon4">
-</div>
-
-<div class="input-group mb-3">
-  <div class="input-group-prepend">
-    <span class="input-group-text" id="basic-addon5">MSpeed</span>
-  </div>
-  <input type="text" id="m_speed" class="form-control" placeholder="Username" aria-label="Username" aria-describedby="basic-addon5">
-</div>
-
         </div>
 	</div>
 
@@ -118,31 +82,42 @@
 
  <div style="position:absolute;bottom:0px;width:100%;" id="ctrl">
     <div class="container-fluid">
-         <svg style="width:300px;height:150px;float:left;">
+         <svg style="width:150px;height:150px;float:left;">
              <g style="stroke-width:2px;" transform="translate(75 75)">
                 <circle cx=0 cy=0 r="65" fill="black" />
                 <line x1=0 y1=0 x2=0 y2=-50 style="stroke:rgb(255,255,255);stroke-width:1px;" />
 
-                 <g id="track" style="stroke:yellow;">
+                 <g id="track_target" style="stroke:yellow;">
                      <line x1=0 y1=0 x2=0 y2=-60 />
                      <line x1=0 y1=-60 x2=-5 y2=-55 />
                      <line x1=0 y1=-60 x2=5 y2=-55 />
                  </g>
-                 <g id="steer" style="stroke:rgb(255,64,64);">
+                 <g id="steeringwheel" style="stroke:rgb(255,64,64);">
                      <line x1=0 y1=0 x2=0 y2=-50 />
                      <line x1=0 y1=-50 x2=-5 y2=-45 />
                      <line x1=0 y1=-50 x2=5 y2=-45 />
                  </g>
-                 <g id="rot" style="stroke:rgb(64,255,64);">
+                 <g id="heading" style="stroke:rgb(64,255,64);">
                      <line x1=0 y1=0 x2=0 y2=-40 />
                      <line x1=0 y1=-40 x2=-5 y2=-35 />
                      <line x1=0 y1=-40 x2=5 y2=-35 />
                  </g>
-
              </g>
-
          </svg>
 
+         <svg style="width:300px;height:150px;float:left;">
+             <rect x=0 y=0 width="300" height="150" fill="black" />
+
+             <g style="stroke-width:2px;" transform="translate(75 75)" id="ps3dotl">
+                <circle cx=0 cy=0 r="2" fill="yellow" />
+             </g>
+
+             <g transform="translate(150 0)">
+             <g style="stroke-width:2px;" transform="translate(75 75)" id="ps3dotr">
+                <circle cx=0 cy=0 r="2" fill="yellow" />
+             </g>
+             </g>
+         </svg>
 
         <div style="float:right;">
             <button q="-10" type="button" class="btn btn-success">

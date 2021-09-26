@@ -2,28 +2,21 @@ version: "3.3"
 services:
   boatpilot:
     image: boatpilot
-    depends_on:
-      - prom
-      - control
-    ports:
-      - "80:8000"
-    volumes:
-      - ./app:/usr/src/app # for developing.
-          
-  control:
-    image: boatpilot
     privileged: true
     depends_on:
+        #      - prom
       - gpsd
+    ports:
+      - "80:8000"
     volumes:
       - boatpilotetc:/etc/boatpilot
       - ./app:/usr/src/app # for developing.
     devices:
       - "/dev/mem"
       - "/dev/gpiomem"
+      - "/dev/input:/dev/input"
     cap_add:
         - SYS_RAWIO
-    command: python3 ./control.py
 
   gpsd:
     image: forcedinductionz/docker-gpsd:latest-armhf
@@ -33,19 +26,19 @@ services:
     ports:
       - "127.0.0.1:2947:2947"
 
-  grafana:
-    image: grafana/grafana
-    depends_on:
-      - prom
-    volumes:
-      - grafanadata:/var/lib/grafana
-    ports:
-      - "3000:3000"
-
-  prom:
-    image: prom/prometheus
+        #  grafana:
+        #    image: grafana/grafana
+        #    depends_on:
+        #      - prom
+        #    volumes:
+        #      - grafanadata:/var/lib/grafana
+        #    ports:
+        #      - "3000:3000"
+        #
+        #  prom:
+        #    image: prom/prometheus
 
 volumes:
-  prometheusdata:
-  grafanadata:
+    #  prometheusdata:
+    #  grafanadata:
   boatpilotetc:
