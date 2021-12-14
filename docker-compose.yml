@@ -18,6 +18,15 @@ services:
     cap_add:
         - SYS_RAWIO
 
+  mqtt:
+    image: eclipse-mosquitto
+    ports:
+        - "1883:1883"
+        - "9001:9001"
+    volums:
+        - mdata:/mosquitto/data
+        - mlog:/mosquitto/log
+
   gpsd:
     image: forcedinductionz/docker-gpsd:latest-armhf
     devices: 
@@ -42,3 +51,5 @@ volumes:
     #  prometheusdata:
     #  grafanadata:
   boatpilotetc:
+  mdata:
+  mlog:
